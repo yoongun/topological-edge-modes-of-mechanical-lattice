@@ -44,7 +44,7 @@ class MechanicalLattice1D:
             eigenvals.append(eigen_val)
             eigenvecs.append(eigen_vec)
         ws = np.sqrt(np.array(eigenvals).real)
-        evs = np.array(eigenvecs).real
+        evs = np.array(eigenvecs)
         return ws, evs
 
     def _min_eigen(self, mat: np.ndarray) -> Tuple[float, float]:
