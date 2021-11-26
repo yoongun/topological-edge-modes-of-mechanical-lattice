@@ -4,41 +4,56 @@ from typing import List, Tuple
 
 
 class KagomeLattice:
-    def __init__(self, k: float, m: List[float], precision: float = .01) -> None:
+    def __init__(self, k: List[float], m: List[float], precision: float = .01) -> None:
         """
         Represents dynamic system of 1 dimensional mechanical lattice.
 
-        :param k: Spring constant
-        :param m: Mass
+        :param k: Spring constant (2)
+        :param m: Mass (333)
         :param precision: Precision for wavenumber q
         """
         self.k = k
-        self.M = np.diag([m[0], m[0], m[1], m[1]])
-        self.precision = precision
+        self.M = np.diag([m[0], m[0], m[1], m[1], m[2], m[2]])
         self.qxs = np.arange(-np.pi, np.pi, precision)
         self.qys = np.arange(-np.pi, np.pi, precision)
 
-    def H(self, qx, qy):
+    def z(self, q) -> np.ndarray:
+        """
+        Return z for given wavevector q
+
+        :param q: Wavevector
+        """
+        Q = np.exp(1.j * q)
+        return self.k[0] + self.k[1] * Q
+
+    def H(self, qx, qy) -> np.ndarray:
         """
         Hamiltonian
 
         :return: Hamiltonian defined given k and qx, qy
         """
-        k = self.k
-        Q1 = np.exp(1.j * (qx - qy) / np.sqrt(2))
-        Q2 = np.exp(1.j * (qx + qy) / np.sqrt(2))
-        Q3 = np.exp(1.j * qx)
-        mat1 = 2 * np.eye(2)
-        mat2 = np.array([
-            [-1 - Q3.conj(), 0],
-            [0, -Q1.conj() - Q2.conj()]
+        q = np.array([-qx / 2 + qy * np.sqrt(3) / 2,
+                      -qx / 2 - qy * np.sqrt(3) / 2,
+                      qx])
+
+        z0 = self.k[0] + self.k[1]
+        z = self.z(q)
+
+        r = np.array([
+            [[-1/2], [np.sqrt(3) / 2]],
+            [[-1/2], [-np.sqrt(3) / 2]],
+            [[1.], [0.]]
         ])
-        mat3 = np.array([
-            [-Q3 - 1, 0],
-            [0, -Q1 - Q2]
+
+        r11 = np.outer(r[0], r[0])
+        r22 = np.outer(r[1], r[1])
+        r33 = np.outer(r[2], r[2])
+
+        H = np.vstack([
+            np.hstack([z0 * (r22 + r33), -z[2].conj() * r33, -z[1] * r22]),
+            np.hstack([-z[2] * r33, z0 * (r33 + r11), -z[0].conj() * r11]),
+            np.hstack([-z[1].conj() * r22, -z[0] * r11, z0 * (r11 + r22)])
         ])
-        mat4 = 2 * np.eye(2)
-        H = k * np.vstack([np.hstack([mat1, mat2]), np.hstack([mat3, mat4])])
 
         return H
 
@@ -49,13 +64,13 @@ class KagomeLattice:
         :return: List of angular frequency omega for each q (wavenumber)
         """
         M_inv = la.inv(self.M)
-        ws = np.empty((len(self.qys), len(self.qxs), 4))
+        ws = np.empty((len(self.qys), len(self.qxs), 6))
 
         for y, qy in enumerate(self.qys):
             for x, qx in enumerate(self.qxs):
                 eigen_val, _ = self._sort_eigen(
                     M_inv.dot(self.H(qx, qy)))
-                ws[y, x] = np.sqrt(np.array(eigen_val).real)
+                ws[y, x] = np.sqrt(np.array(eigen_val.real))
         return ws
 
     def _sort_eigen(self, mat: np.ndarray) -> Tuple[List[float], List[float]]:
@@ -65,5 +80,5 @@ class KagomeLattice:
         :return: eigenvalue, eigenvector
         """
         eigenvals, eigenvecs = la.eig(mat)
-        min_idx = np.argsort(eigenvals)
-        return eigenvals[min_idx], eigenvecs[min_idx]
+        sorted_idx = np.argsort(eigenvals)
+        return eigenvals[sorted_idx], eigenvecs[sorted_idx]
