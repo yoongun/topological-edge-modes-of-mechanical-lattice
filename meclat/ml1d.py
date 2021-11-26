@@ -29,13 +29,13 @@ class MechanicalLattice1D:
         k = self.k
         Q = np.exp(1.j * q)
         return np.array([[k[0] + k[1], -k[0] - k[1] * Q.conj()],
-                        [-k[0] - k[1] * Q, k[0] + k[1]]])
+                         [-k[0] - k[1] * Q, k[0] + k[1]]])
 
     def dispersion(self) -> List[Tuple[float, float]]:
         """
         Calculate the dispersion relation
 
-        :return: List of angular frequency omega for each q (wavenumber)
+        :return: List of angular frequency omega for each q (wavenumber) and its eigenvectors
         """
         M_inv = la.inv(self.M)
         eigenvals = []
@@ -45,7 +45,8 @@ class MechanicalLattice1D:
             eigenvals.append(eigen_val)
             eigenvecs.append(eigen_vec)
         ws = np.sqrt(np.array(eigenvals).real)
-        return ws
+        evs = np.array(eigenvecs).real
+        return ws, evs
 
     def _min_eigen(self, mat: np.ndarray) -> Tuple[float, float]:
         """
