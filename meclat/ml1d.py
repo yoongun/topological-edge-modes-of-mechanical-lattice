@@ -17,7 +17,6 @@ class MechanicalLattice1D:
                 f"The length of k={len(k)} and m={len(m)} does not match.")
         self.k = k
         self.M = np.diag(m)
-        self.precision = precision
         self.qs = np.arange(-np.pi, np.pi, precision)
 
     def H(self, q):

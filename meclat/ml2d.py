@@ -14,7 +14,6 @@ class MechanicalLattice2DSquare:
         """
         self.k = k
         self.M = np.diag([m[0], m[0], m[1], m[1]])
-        self.precision = precision
         self.qxs = np.arange(-np.pi, np.pi, precision)
         self.qys = np.arange(-np.pi, np.pi, precision)
 
