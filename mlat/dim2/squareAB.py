@@ -4,6 +4,14 @@ from typing import List, Tuple
 
 
 class SquareABLattice:
+    """
+    ABAB...
+    BABA...
+    ...
+    r1 →
+    r2 ↓
+    """
+
     def __init__(self, k: float, m: List[float], precision: float = .01) -> None:
         """
         Represents dynamic system of 1 dimensional mechanical lattice.
