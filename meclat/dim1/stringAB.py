@@ -6,7 +6,7 @@ import plotly.express as px
 import pandas as pd
 
 
-class StringAB:
+class StringABLattice:
     def __init__(self, k: List[float], m: List[float], precision: float = .01) -> None:
         """
         Represents dynamic system of 1 dimensional mechanical lattice.

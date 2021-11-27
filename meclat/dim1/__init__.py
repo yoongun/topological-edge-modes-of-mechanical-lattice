@@ -1,1 +1,1 @@
-from .stringAB import StringAB
+from .stringAB import StringABLattice
