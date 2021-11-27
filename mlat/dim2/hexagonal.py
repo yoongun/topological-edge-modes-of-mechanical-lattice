@@ -3,17 +3,18 @@ from numpy import linalg as la
 from typing import List, Tuple
 
 
-class TriangularLattice:
+class HexagonalLattice:
     def __init__(self, k: List[float], m: List[float], precision: float = .01) -> None:
         """
-        Represents dynamic system of 2 dimensional triangular lattice.
+        Represents dynamic system of 2 dimensional hexagonal lattice.
 
-        :param k: Spring constant (2)
-        :param m: Mass (3)
+        :param k: List of spring constant (2)
+        :param m: List of mass (6)
         :param precision: Precision for wavenumber q
         """
         self.k = k
-        self.M = np.diag([m[0], m[0], m[1], m[1], m[2], m[2]])
+        self.M = np.diag([m[0], m[0], m[1], m[1], m[2], m[2],
+                          m[3], m[3], m[4], m[4], m[5], m[5]])
         self.qxs = np.arange(-np.pi, np.pi, precision)
         self.qys = np.arange(-np.pi, np.pi, precision)
 
@@ -21,7 +22,7 @@ class TriangularLattice:
         q = np.array([
             1 / 2 * qx + np.sqrt(3) / 2 * qy,
             1 / 2 * qx - np.sqrt(3) / 2 * qy,
-            qy
+            qx
         ])
         Q = np.exp(1.j * q)
         return Q
@@ -49,14 +50,25 @@ class TriangularLattice:
         Q = self.Q(qx, qy)
         s = self.subspace_r
 
-        alpha = k[1] * (s[0] + s[1] + s[2]) + k[0] * (s[0] + s[1] + s[2])
-        h12 = -k[1] * (Q[2] * s[1] + Q[0] * s[2]) - k[0] * s[0]
-        h13 = -k[1] * (Q[1].conj() * s[2] + Q[2] * s[0]) - k[0] * s[1]
-        h23 = -k[1] * (Q[0].conj() * s[0] + Q[1].conj() * s[1]) - k[0] * s[2]
+        alpha = k[1] * (s[0] + s[1] + s[2])
+        h12 = - k[0] * s[0]
+        h14 = - k[1] * Q[2].conj() * s[2]
+        h16 = - k[0] * s[1]
+        h23 = - k[0] * s[2]
+        h25 = - k[1] * Q[1].conj() * s[1]
+        h34 = - k[0] * s[1]
+        h36 = - k[1] * Q[0] * s[0]
+        h45 = - k[0] * s[0]
+        h56 = - k[0] * s[2]
+        z = np.zeros((2, 2))
+
         H = np.vstack([
-            np.hstack([alpha + s[2] * (k[1] - k[0]), h12, h13]),
-            np.hstack([h12.conj(), alpha + s[1] * (k[1] - k[0]), h23]),
-            np.hstack([h13.conj(), h23.conj(), alpha + s[0] * (k[1] - k[0])])
+            np.hstack([alpha, h12, z, h14, z, h16]),
+            np.hstack([h12.conj(), alpha, h23, z, h25, z]),
+            np.hstack([z, h23.conj(), alpha, h34, z, h36]),
+            np.hstack([h14.conj(), z, h34.conj(), alpha, h45, z]),
+            np.hstack([z, h25.conj(), z, h45.conj(), alpha, h56]),
+            np.hstack([h16.conj(), z, h36.conj(), z, h56.conj(), alpha])
         ])
 
         return H
@@ -68,8 +80,8 @@ class TriangularLattice:
         :return: List of angular frequency omega for each q (wavenumber)
         """
         M_inv = la.inv(self.M)
-        ws = np.empty((len(self.qys), len(self.qxs), 6))
-        evecs = np.empty((len(self.qys), len(self.qxs), 6, 6),
+        ws = np.empty((len(self.qys), len(self.qxs), 12))
+        evecs = np.empty((len(self.qys), len(self.qxs), 12, 12),
                          dtype=np.complex128)
 
         for y, qy in enumerate(self.qys):
