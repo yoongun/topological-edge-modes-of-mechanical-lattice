@@ -1,3 +1,3 @@
 from .kagome import KagomeLattice
 from .squareAB import SquareABLattice
-from .triangle import TriangleLattice
+from .triangular import TriangularLattice
