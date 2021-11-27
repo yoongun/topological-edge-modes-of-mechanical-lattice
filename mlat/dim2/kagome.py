@@ -4,9 +4,16 @@ from typing import List, Tuple
 
 
 class KagomeLattice:
+    """
+    Reference:
+    "A study of topological effects in 1D and 2D mechanical lattices" H. Chen (2018), et. al.
+    from 'Journal of the Mechanics and Physics of Solids', Volum 117, Aug 2018, 22-36,
+    https://www.sciencedirect.com/science/article/abs/pii/S0022509618301820
+    """
+
     def __init__(self, k: List[float], m: List[float], precision: float = .01) -> None:
         """
-        Represents dynamic system of 1 dimensional mechanical lattice.
+        Represents dynamic system of Kagome lattice.
 
         :param k: Spring constant (2)
         :param m: Mass (333)

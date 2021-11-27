@@ -4,17 +4,14 @@ from typing import List, Tuple
 
 
 class SquareABLattice:
-    """
-    ABAB...
-    BABA...
-    ...
-    r1 →
-    r2 ↓
-    """
-
     def __init__(self, k: float, m: List[float], precision: float = .01) -> None:
         """
-        Represents dynamic system of 1 dimensional mechanical lattice.
+        Represents dynamic system of 2 dimensional square lattice consiste of
+        two sublattice A, B in one unit cell
+        e.g.)
+        ABAB...
+        BABA...
+        ...
 
         :param k: Spring constant
         :param m: Mass
@@ -28,6 +25,10 @@ class SquareABLattice:
     def H(self, qx, qy):
         """
         Hamiltonian
+
+        axis settings:
+        r1 →
+        r2 ↓
 
         :return: Hamiltonian defined given k and qx, qy
         """
