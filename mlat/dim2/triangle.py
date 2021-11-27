@@ -17,6 +17,28 @@ class TriangleLattice:
         self.qxs = np.arange(-np.pi, np.pi, precision)
         self.qys = np.arange(-np.pi, np.pi, precision)
 
+    def Q(self, qx, qy) -> np.ndarray:
+        q = np.array([
+            1 / 2 * qx + np.sqrt(3) / 2 * qy,
+            1 / 2 * qx - np.sqrt(3) / 2 * qy,
+            qy
+        ])
+        Q = np.exp(1.j * q)
+        return Q
+
+    @property
+    def subspace_r(self) -> np.ndarray:
+        r = np.array([
+            [[1 / 2], [np.sqrt(3) / 2]],
+            [[1 / 2], [-np.sqrt(3) / 2]],
+            [[1.], [0.]]
+        ])
+        subspaces = np.array([
+            np.outer(r[0], r[0]),
+            np.outer(r[1], r[1]),
+            np.outer(r[2], r[2])])
+        return subspaces
+
     def H(self, qx, qy) -> np.ndarray:
         """
         Hamiltonian
@@ -24,31 +46,17 @@ class TriangleLattice:
         :return: Hamiltonian defined given k and qx, qy
         """
         k = self.k
+        Q = self.Q(qx, qy)
+        s = self.subspace_r
 
-        q = np.array([
-            1 / 2 * qx + np.sqrt(3) / 2 * qy,
-            1 / 2 * qx - np.sqrt(3) / 2 * qy,
-            qy
-        ])
-        Q = np.exp(1.j * q)
-
-        r = np.array([
-            [[1 / 2], [np.sqrt(3) / 2]],
-            [[1 / 2], [-np.sqrt(3) / 2]],
-            [[1.], [0.]]
-        ])
-        r11 = np.outer(r[0], r[0])
-        r22 = np.outer(r[1], r[1])
-        r33 = np.outer(r[2], r[2])
-
-        alpha = k[1] * (r11 + r22 + r33) + k[0] * (r11 + r22 + r33)
-        h12 = -k[1] * (Q[2] * r22 + Q[0] * r33) - k[0] * r11
-        h13 = -k[1] * (Q[1].conj() * r33 + Q[2] * r11) - k[0] * r22
-        h23 = -k[1] * (Q[0].conj() * r11 + Q[1].conj() * r22) - k[0] * r33
+        alpha = k[1] * (s[0] + s[1] + s[2]) + k[0] * (s[0] + s[1] + s[2])
+        h12 = -k[1] * (Q[2] * s[1] + Q[0] * s[2]) - k[0] * s[0]
+        h13 = -k[1] * (Q[1].conj() * s[2] + Q[2] * s[0]) - k[0] * s[1]
+        h23 = -k[1] * (Q[0].conj() * s[0] + Q[1].conj() * s[1]) - k[0] * s[2]
         H = np.vstack([
-            np.hstack([alpha + r33 * (k[1] - k[0]), h12, h13]),
-            np.hstack([h12.conj(), alpha + r22 * (k[1] - k[0]), h23]),
-            np.hstack([h13.conj(), h23.conj(), alpha + r11 * (k[1] - k[0])])
+            np.hstack([alpha + s[2] * (k[1] - k[0]), h12, h13]),
+            np.hstack([h12.conj(), alpha + s[1] * (k[1] - k[0]), h23]),
+            np.hstack([h13.conj(), h23.conj(), alpha + s[0] * (k[1] - k[0])])
         ])
 
         return H
@@ -61,7 +69,8 @@ class TriangleLattice:
         """
         M_inv = la.inv(self.M)
         ws = np.empty((len(self.qys), len(self.qxs), 6))
-        evecs = np.empty((len(self.qys), len(self.qxs), 6, 6))
+        evecs = np.empty((len(self.qys), len(self.qxs), 6, 6),
+                         dtype=np.complex128)
 
         for y, qy in enumerate(self.qys):
             for x, qx in enumerate(self.qxs):
