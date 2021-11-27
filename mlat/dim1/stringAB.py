@@ -77,7 +77,7 @@ class StringABLattice:
         """
         :param q: Wavenumber to animate [-pi, pi]
         :param N: Number of unit cells
-        :param mode: Mode to animate (0 for phonon, 1 for photon)
+        :param mode: Mode to animate (0 for acoustic, 1 for optical)
         :param fps: (Optional) Frame per second (/s) (default: 30 /s)
         :param s: (Optional) Animation duration (s) (default: 3 s)
         """
