@@ -1,6 +1,9 @@
 import numpy as np
 from numpy import linalg as la
 from typing import List, Tuple
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
 
 
 class MechanicalLattice1D:
@@ -65,3 +68,88 @@ class MechanicalLattice1D:
         """
         k = self.k
         return (k[0] - k[1]) / (k[0] + k[1])
+
+    def animate(self, q: float, N: int, mode: int, *, fps: int = 30, s: int = 3):
+        """
+        :param q: Wavenumber to animate [-pi, pi]
+        :param N: Number of unit cells
+        :param mode: Mode to animate (0 for phonon, 1 for photon)
+        :param fps: (Optional) Frame per second (/s) (default: 30 /s)
+        :param s: (Optional) Animation duration (s) (default: 3 s)
+        """
+        ws, evs = self.dispersion()
+
+        # Parameters
+        idx = min(range(len(self.qs)), key=lambda i: abs(self.qs[i] - q))
+        w = ws[idx, mode]  # /s
+
+        # Construct frames
+        frames = []
+        for t in range(int(s * fps)):
+            dt = t / fps
+            dphase = dt * w * 2 * np.pi
+            y = []
+            for i in range(N):
+                y.append(evs[idx, mode, 0] * np.exp(1.j * (q * i + dphase)))
+                y.append(evs[idx, mode, 1] * np.exp(1.j * (q * i + dphase)))
+            y = np.array(y)
+            frames.append(
+                go.Frame(data=[go.Scatter(y=y.real, line_shape='spline')]))
+
+        # Figure components
+        start_button = dict(
+            label="Play",
+            method="animate",
+            args=[
+                None,
+                {
+                    "frame": {"duration": 1000 / fps, "redraw": False},
+                    "fromcurrent": True,
+                    "transition": {"duration": 100}
+                }])
+        pause_button = dict(
+            label="Pause",
+            method="animate",
+            args=[
+                [None],
+                {
+                    "frame": {"duration": 0, "redraw": False},
+                    "mode": "immediate",
+                    "transition": {"duration": 0}
+                }])
+
+        # Plot
+        fig = go.Figure(
+            data=frames[0].data,
+            layout=go.Layout(
+                title="Dispersion relation animation",
+                yaxis=dict(range=[-1., 1.], autorange=False),
+                updatemenus=[
+                    dict(
+                        type="buttons",
+                        buttons=[start_button, pause_button
+                                 ])
+                ]
+            ),
+            frames=frames[1:])
+        fig.show()
+
+    def plot_dispersion_relation(self):
+        ws, _ = self.dispersion()
+        w0 = ws[:, 0]
+        w1 = ws[:, 1]
+        ws = np.append(w0, w1)
+
+        x = np.append(self.qs, self.qs)
+        y = ws
+        index = np.append(np.repeat(0, len(self.qs)),
+                          np.repeat(1, len(self.qs)))
+
+        df = pd.DataFrame({
+            "q": x,
+            "w": y,
+            "index": index,
+        })
+
+        fig = px.line(df, x="q", y="w", color='index')
+        fig.show()
