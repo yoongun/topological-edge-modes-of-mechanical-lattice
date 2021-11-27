@@ -24,9 +24,9 @@ class MechanicalLattice2DSquare:
         :return: Hamiltonian defined given k and qx, qy
         """
         k = self.k
-        Q1 = np.exp(1.j * (qx - qy) / np.sqrt(2))
-        Q2 = np.exp(1.j * (qx + qy) / np.sqrt(2))
-        Q3 = np.exp(1.j * qx)
+        Q1 = np.exp(1.j * (qx - qy) / np.sqrt(2))  # NE direction
+        Q2 = np.exp(1.j * (qx + qy) / np.sqrt(2))  # SE direction
+        Q3 = np.exp(1.j * qx)  # E direction
         mat1 = 2 * np.eye(2)
         mat2 = np.array([
             [-1 - Q3.conj(), 0],
@@ -49,13 +49,16 @@ class MechanicalLattice2DSquare:
         """
         M_inv = la.inv(self.M)
         ws = np.empty((len(self.qys), len(self.qxs), 4))
+        evecs = np.empty((len(self.qys), len(self.qxs), 4, 4),
+                         dtype=np.complex128)
 
         for y, qy in enumerate(self.qys):
             for x, qx in enumerate(self.qxs):
-                eigen_val, _ = self._sort_eigen(
+                eval_, evec = self._sort_eigen(
                     M_inv.dot(self.H(qx, qy)))
-                ws[y, x] = np.sqrt(np.array(eigen_val).real)
-        return ws
+                ws[y, x] = np.sqrt(np.array(eval_).real)
+                evecs[y, x] = evec
+        return ws, evecs
 
     def _sort_eigen(self, mat: np.ndarray) -> Tuple[List[float], List[float]]:
         """
