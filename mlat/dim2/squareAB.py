@@ -13,8 +13,8 @@ class SquareABLattice:
         BABA...
         ...
 
-        :param k: Spring constant
-        :param m: Mass
+        :param k: Spring constant (1)
+        :param m: Mass (2)
         :param precision: Precision for wavenumber q
         """
         self.k = k
