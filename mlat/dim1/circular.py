@@ -91,6 +91,8 @@ class CircularLattice:
 
         :return: eigenvalue, eigenvector
         """
+        if np.isnan(mat).any():
+            print(mat)
         eigenvals, eigenvecs = la.eig(mat)
         sorted_idx = np.argsort(eigenvals)
         return eigenvals[sorted_idx], eigenvecs[sorted_idx]
