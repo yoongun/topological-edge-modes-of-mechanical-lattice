@@ -13,8 +13,6 @@ class StringABLattice:
     from 'Journal of the Mechanics and Physics of Solids', Volum 117, Aug 2018, 22-36,
     https://www.sciencedirect.com/science/article/abs/pii/S0022509618301820
     """
-    """
-    """
 
     def __init__(self, k: List[float], m: List[float], precision: float = .01) -> None:
         """
