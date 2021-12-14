@@ -28,7 +28,7 @@ class pauli:
         ], dtype=np.complex128)
 
 
-class _dirac:
+class dirac_impl:
     def __init__(self, N) -> None:
         self.N = N
 
@@ -45,7 +45,7 @@ class dirac:
     def __init__(self, *Ns) -> None:
         self.ds = []
         for N in Ns:
-            self.ds.append(_dirac(N))
+            self.ds.append(dirac_impl(N))
 
     def bra(self, *ms):
         return self.ket(*ms).T.conj()
