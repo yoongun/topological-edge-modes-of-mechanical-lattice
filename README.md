@@ -10,6 +10,8 @@ You might want to install packages to run code in this repo.
 pip install -r requirements.txt
 ```
 
+You might need to install torch from the official site from https://pytorch.org/ if you want to exploit GPGPU feature.
+
 ## Ackknowledgement
 
 Special thanks for the professor Tomoda for several advices and big support for the setup of experiment. 
