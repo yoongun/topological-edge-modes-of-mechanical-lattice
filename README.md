@@ -4,7 +4,7 @@ This repository is the work I've done for my graduation thesis in Hokkaido Unive
 
 ## Prerequisite
 
-You need to install packages to run code in this repo.
+You might want to install packages to run code in this repo.
 
 ```bash
 pip install -r requirements.txt
