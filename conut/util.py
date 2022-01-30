@@ -1,31 +1,32 @@
 import numpy as np
+import torch
 
 
 class pauli:
     @property
     def i(self):
-        return np.eyes(2, dtype=np.complex128)
+        return torch.eyes(2, dtype=torch.cdouble)
 
     @property
     def x(self):
-        return np.array([
+        return torch.tensor([
             [0., 1.],
             [1., 0.]
-        ], dtype=np.complex128)
+        ], dtype=torch.cdouble)
 
     @property
     def y(self):
-        return np.array([
+        return torch.tensor([
             [0., -1.j],
             [1.j, 0.]
-        ], dtype=np.complex128)
+        ], dtype=torch.cdouble)
 
     @property
     def z(self):
-        return np.array([
+        return torch.tensor([
             [1., 0.],
             [0., -1.]
-        ], dtype=np.complex128)
+        ], dtype=torch.cdouble)
 
 
 σ = pauli()

@@ -1,2 +1,1 @@
 from .mechanical_graphene import MechanicalGrapheneBulk
-from .mechanical_graphene import MechanicalGrapheneRibbon
