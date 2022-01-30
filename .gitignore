@@ -1,5 +1,6 @@
 # Do not import data files
 *.csv
+*.pickle
 
 # Do not version control image files
 *.png
