@@ -1,23 +1,25 @@
+from enum import Enum
+from sympy import per
 import torch
 import torch.nn as nn
 import numpy as np
 from conut.util import σ
 
 
+Mode = Enum('Mode', ['Bulk', 'Ribbon'])
+
+
 class MechanicalGrapheneLattice:
     def __init__(self, l: float, α: float) -> None:
         """
-        :param κ:
-        :param M:
         :param l:
-        :param precision:
         """
         # Width of x, y
         self.xw = np.pi / np.sqrt(3) * 2
         self.yw = np.pi / 3 * 4
 
-        x = torch.tensor([[1.], [0.]])  # x hat
-        y = torch.tensor([[0.], [1.]])  # y hat
+        x = torch.tensor([[1.], [0.]], dtype=torch.cdouble)  # x hat
+        y = torch.tensor([[0.], [1.]], dtype=torch.cdouble)  # y hat
 
         # Sublattice vectors
         self.a1 = np.sqrt(3) * l * x
@@ -36,7 +38,7 @@ class MechanicalGrapheneLattice:
 
         # Manipulation of Dirac Cones in Mechanical
         # Graphene Toshikaze Kariyado & Yasuhiro Hatsugai (2015)
-        z = torch.tensor([[0, 1], [-1, 0]])
+        z = torch.tensor([[0, 1], [-1, 0]], dtype=torch.cdouble)
         r1_ = z.mm(self.r1h)
         r2_ = z.mm(self.r2h)
         r3_ = z.mm(self.r3h)
@@ -62,15 +64,16 @@ class MechanicalGrapheneLattice:
         self.mg = self.MG / torch.norm(self.MG)
 
 
-class MGBulkH(nn.Module):
-    def __init__(self, lattice: MechanicalGrapheneLattice, ω0: float, α: float, perturbation=False) -> None:
-        super(MGBulkH, self).__init__()
+class BulkH(nn.Module):
+    def __init__(self, lattice: MechanicalGrapheneLattice, ω0: float, α: float, Ω: float, perturbation=False) -> None:
+        super(BulkH, self).__init__()
         self.lat = lattice
         self.ω0 = ω0
         self.α = α
+        self.Ω = Ω
         self.perturbation = perturbation
 
-    def forward(self, k: torch.tensor, Ω: float):
+    def forward(self, k: torch.tensor):
         r11, r22, r33 = self.lat.r11, self.lat.r22, self.lat.r33
         γ1, γ2, γ3 = self.lat.γ1, self.lat.γ2, self.lat.γ3
         K1 = torch.exp(1.j * k.conj().T.mm(self.lat.a1))
@@ -78,10 +81,10 @@ class MGBulkH(nn.Module):
 
         if self.perturbation:
             H = self.ω0**2 * np.vstack([
-                np.hstack([(r11 + r22 + r33) * (2 - self.α) - 2 * Ω * σ.y / self.ω0**2,
+                np.hstack([(r11 + r22 + r33) * (2 - self.α) - 2 * self.Ω * σ.y / self.ω0**2,
                            -(γ1 + K1.conj() * γ2 + K2.conj() * γ3)]),
                 np.hstack([-(γ1 + K1 * γ2 + K2 * γ3),
-                           (r11 + r22 + r33) * (2 - self.α) - 2 * Ω * σ.y / self.ω0**2]),
+                           (r11 + r22 + r33) * (2 - self.α) - 2 * self.Ω * σ.y / self.ω0**2]),
             ])
             return H
         L11 = torch.vstack([
@@ -90,8 +93,8 @@ class MGBulkH(nn.Module):
             torch.hstack([-(r11 + K1 * r22 + K2 * r33), r11 + r22 + r33])
         ])
         L12 = torch.vstack([
-            torch.hstack([-2 * Ω * σ.y, torch.zeros((2, 2))]),
-            torch.hstack([torch.zeros(2, 2), -2 * Ω * σ.y])
+            torch.hstack([-2 * self.Ω * σ.y, torch.zeros((2, 2))]),
+            torch.hstack([torch.zeros(2, 2), -2 * self.Ω * σ.y])
         ])
         L = self.ω0**2 * torch.vstack([
             torch.hstack([L11, L12]),
@@ -106,85 +109,117 @@ class MGBulkH(nn.Module):
         return H
 
 
-class MechanicalGrapheneBulk(nn.Module):
-    def __init__(self, κ: float, α: float, m: float, l: float, Ω=0., precision=1e-1, perturbation=False) -> None:
-        """
-        :param κ:
-        :param M:
-        :param l:
-        :param precision:
-        """
-        super(MechanicalGrapheneBulk, self).__init__()
-        ω0 = np.sqrt(κ / m)
-        self.lat = MechanicalGrapheneLattice(l, α, precision)
-        self.kxs = torch.arange(-self.lat.xw, self.lat.xw, precision)
-        self.kys = torch.arange(-self.lat.yw, self.lat.yw, precision)
-        num_gk = int(np.linalg.norm(self.lat.GK) / precision)
-        num_km = int(np.linalg.norm(self.lat.KM) / precision)
-        num_mg = int(np.linalg.norm(self.lat.MG) / precision) + 1
-        self.kxs_gkmg = np.hstack([
-            [self.lat.gk[0, 0] * precision * i for i in range(num_gk)],
-            [self.lat.km[0, 0] * precision * i + self.lat.GK[0, 0]
-                for i in range(num_km)],
-            [self.lat.mg[0, 0] * precision * i + self.lat.GK[0, 0] + self.lat.KM[0, 0]
-                for i in range(num_mg)]
-        ])
-        self.kys_gkmg = np.hstack([
-            [self.lat.gk[1, 0] * precision * i for i in range(num_gk)],
-            [self.lat.km[1, 0] * precision * i + self.lat.GK[1, 0]
-                for i in range(num_km)],
-            [self.lat.mg[1, 0] * precision * i + self.lat.GK[1, 0] + self.lat.KM[1, 0]
-                for i in range(num_mg)]
-        ])
-        self.h = MGBulkH(self.lat, ω0, α, perturbation=perturbation)
-        self.Ω = Ω
+class RibbonH(nn.Module):
+    def __init__(self, lattice: MechanicalGrapheneLattice, ω0: float, α: float, Ω: float, perturbation=False) -> None:
+        super(BulkH, self).__init__()
+        self.lat = lattice
+        self.ω0 = ω0
+        self.α = α
         self.perturbation = perturbation
 
-        self.evals_all = torch.zeros(
+    def forward(self, k: torch.tensor, Ω: float):
+        return
+
+
+class MechanicalGraphene(nn.Module):
+    def __init__(self, κ: float, α: float, m: float, l: float, mode: Mode, Ω=0., precision=1e-1, perturbation=False) -> None:
+        """
+        :param κ: Spring constant (N/m).
+        :param α: R_0 / l_0.
+        :param m: Mass (kg).
+        :param l: Distance between masses (m).
+        :param mode: Mode of Hamiltonian (Bulk | Ribbon)
+        :param Ω: Roation frequency (default 0 Hz).
+        :param precision: Precision of wavenumber (default 1e-1).
+        :param perturbation: On/off perturbation approximation of Coriolis force (default False).
+        """
+        super(MechanicalGraphene, self).__init__()
+        # Parameter of the model
+        self.κ = κ
+        self.α = α
+        self.m = m
+        self.l = l
+        self.mode = mode
+        self.Ω = Ω
+        self.precision = precision
+        self.perturbation = perturbation
+
+        # Setup lattice
+        self.lat = MechanicalGrapheneLattice(l, α)
+
+        # Setup wavenumbers
+        self.kxs = torch.arange(-self.lat.xw, self.lat.xw, precision)
+        self.kys = torch.arange(-self.lat.yw, self.lat.yw, precision)
+
+        # Wavenumber for 2d dispersion relation
+        self.num_gk = int(np.linalg.norm(self.lat.GK) / precision)
+        self.num_km = int(np.linalg.norm(self.lat.KM) / precision)
+        self.num_mg = int(np.linalg.norm(self.lat.MG) / precision) + 1
+        self.kxs_gkmg = np.hstack([
+            [self.lat.gk[0, 0] * precision * i for i in range(self.num_gk)],
+            [self.lat.km[0, 0] * precision * i + self.lat.GK[0, 0]
+                for i in range(self.num_km)],
+            [self.lat.mg[0, 0] * precision * i + self.lat.GK[0, 0] + self.lat.KM[0, 0]
+                for i in range(self.num_mg)]
+        ])
+        self.kys_gkmg = np.hstack([
+            [self.lat.gk[1, 0] * precision * i for i in range(self.num_gk)],
+            [self.lat.km[1, 0] * precision * i + self.lat.GK[1, 0]
+                for i in range(self.num_km)],
+            [self.lat.mg[1, 0] * precision * i + self.lat.GK[1, 0] + self.lat.KM[1, 0]
+                for i in range(self.num_mg)]
+        ])
+
+        ω0 = np.sqrt(κ / m)
+        if mode == Mode.Bulk:
+            self.h = BulkH(lattice=self.lat, ω0=ω0, α=α,
+                           Ω=Ω, perturbation=perturbation)
+        elif mode == Mode.Ribbon:
+            self.h = RibbonH(lattice=self.lat, ω0=ω0, α=α,
+                             Ω=Ω, perturbation=perturbation)
+        else:
+            raise AttributeError("Mode not supported.")
+        self.perturbation = perturbation
+
+        self.evals = torch.zeros(
             (len(self.kys), len(self.kxs), 8), dtype=torch.cdouble)
-        self.evecs_all = torch.zeros(
+        self.evecs = torch.zeros(
             (len(self.kys), len(self.kxs), 8, 8), dtype=torch.cdouble)
+
+        self.evals_gkmg = torch.zeros(
+            (len(self.kys_gkmg), 8), dtype=torch.cdouble)
+        self.evecs_gkmg = torch.zeros(
+            (len(self.kys_gkmg), 8, 8), dtype=torch.cdouble)
+
+        self.forward()
+        self.forward(True)
 
     def forward(self, gkmg=False):
         if gkmg:
-            evals_all = []
-            evecs_all = []
-            for ky, kx in zip(self.kys_gkmg, self.kxs_gkmg):
-                k = torch.tensor([[kx], [ky]])
-                evals, evecs = torch.linalg.eig(self.h(k, self.Ω))
+            for i, (ky, kx) in enumerate(zip(self.kys_gkmg, self.kxs_gkmg)):
+                k = torch.tensor([[kx], [ky]], dtype=torch.cdouble)
+                evals, evecs = torch.linalg.eig(self.h(k))
                 idcs = torch.argsort(evals.real)
                 evals, evecs = evals[idcs], evecs[idcs]
-                self.evals_all[y, x] = evals
-                self.evecs_all[y, x] = evecs
+                self.evals_gkmg[i] = evals
+                self.evecs_gkmg[i] = evecs
+            if self.perturbation:
+                self.evals_gkmg = torch.sqrt(self.evals_gkmg)
+            return self.evals_gkmg.real, self.evecs_gkmg
 
         for y, ky in enumerate(self.kys):
             for x, kx in enumerate(self.kxs):
-                k = torch.tensor([[kx], [ky]])
-                evals, evecs = torch.linalg.eig(self.h(k, self.Ω))
+                k = torch.tensor([[kx], [ky]], dtype=torch.cdouble)
+                evals, evecs = torch.linalg.eig(self.h(k))
                 idcs = torch.argsort(evals.real)
                 evals, evecs = evals[idcs], evecs[idcs]
-                self.evals_all[y, x] = evals
-                self.evecs_all[y, x] = evecs
+                self.evals[y, x] = evals
+                self.evecs[y, x] = evecs
         if self.perturbation:
-            self.evals_all = torch.sqrt(self.evecs_all)
-        return self.evals_all.real, self.evecs_all
+            self.evals = torch.sqrt(self.evals)
+        return self.evals.real, self.evecs
 
     def dispersion(self, gkmg=False):
-        evals, evecs = self.forward(gkmg)
-        return evals.numpy(), evecs.numpy()
-
-
-class MechanicalGrapheneRibbon:
-    def __init__(self, C: float, M: float, l: float, precision=1e-1) -> None:
-        """
-
-        :param C:
-        :param M:
-        :param l:
-        :param precision:
-        """
-
-        pass
-
-    def h(self):
-        ...
+        if gkmg:
+            return self.evals_gkmg.real.numpy(), self.evecs_gkmg.numpy()
+        return self.evals.real.numpy(), self.evecs.numpy()
