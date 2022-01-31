@@ -18,7 +18,6 @@ class Plot:
         X, Y = np.meshgrid(self.sys.kxs, self.sys.kys)
 
         vmax = np.amax(self.evals[:, :, max(bands)])
-        print(vmax)
         p = None
         for b in bands:
             p = ax.plot_surface(
