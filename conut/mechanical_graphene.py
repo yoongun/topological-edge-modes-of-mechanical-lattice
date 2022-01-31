@@ -1,5 +1,4 @@
 from enum import Enum
-from sympy import per
 import torch
 import torch.nn as nn
 import numpy as np
@@ -14,9 +13,9 @@ class MechanicalGrapheneLattice:
         """
         :param l:
         """
-        # Width of x, y
-        self.xw = np.pi / np.sqrt(3) * 2
-        self.yw = np.pi / 3 * 4
+        # Width of x, y in brillouin zone.
+        self.xw = np.pi / np.sqrt(3) * 2 / l
+        self.yw = np.pi / 3 * 4 / l
 
         x = torch.tensor([[1.], [0.]], dtype=torch.cdouble)  # x hat
         y = torch.tensor([[0.], [1.]], dtype=torch.cdouble)  # y hat
@@ -50,11 +49,11 @@ class MechanicalGrapheneLattice:
         self.γ3 = (1 - α) * r33_ + self.r33
 
         # Dispersion relation G1 -> K -> M -> G2
-        b1 = 2 * np.pi / np.sqrt(3) / l * (x - y / np.sqrt(3))
-        b2 = 4 * np.pi / 3 / l * y
+        self.b1 = 2 * np.pi / np.sqrt(3) / l * (x - y / np.sqrt(3))
+        self.b2 = 4 * np.pi / 3 / l * y
         self.G = torch.tensor([[0.], [0.]])
-        self.K = (b1 / 2 + b2 / 4) / np.cos(np.pi / 6)**2
-        self.M = b1 / 2
+        self.K = (self.b1 / 2 + self.b2 / 4) / np.cos(np.pi / 6)**2
+        self.M = self.b1 / 2
 
         self.GK = (self.K - self.G)
         self.KM = (self.M - self.K)
@@ -80,11 +79,11 @@ class BulkH(nn.Module):
         K2 = torch.exp(1.j * k.conj().T.mm(self.lat.a2))
 
         if self.perturbation:
-            H = self.ω0**2 * np.vstack([
-                np.hstack([(r11 + r22 + r33) * (2 - self.α) - 2 * self.Ω * σ.y / self.ω0**2,
-                           -(γ1 + K1.conj() * γ2 + K2.conj() * γ3)]),
-                np.hstack([-(γ1 + K1 * γ2 + K2 * γ3),
-                           (r11 + r22 + r33) * (2 - self.α) - 2 * self.Ω * σ.y / self.ω0**2]),
+            H = self.ω0**2 * torch.vstack([
+                torch.hstack([(r11 + r22 + r33) * (2 - self.α) - 2 * self.Ω * σ.y / self.ω0**2,
+                              -(γ1 + K1.conj() * γ2 + K2.conj() * γ3)]),
+                torch.hstack([-(γ1 + K1 * γ2 + K2 * γ3),
+                              (r11 + r22 + r33) * (2 - self.α) - 2 * self.Ω * σ.y / self.ω0**2]),
             ])
             return H
         L11 = torch.vstack([
@@ -180,19 +179,46 @@ class MechanicalGraphene(nn.Module):
         else:
             raise AttributeError("Mode not supported.")
         self.perturbation = perturbation
-
+        dim = 8
+        if perturbation:
+            dim = 4
         self.evals = torch.zeros(
-            (len(self.kys), len(self.kxs), 8), dtype=torch.cdouble)
+            (len(self.kys), len(self.kxs), dim), dtype=torch.cdouble)
         self.evecs = torch.zeros(
-            (len(self.kys), len(self.kxs), 8, 8), dtype=torch.cdouble)
+            (len(self.kys), len(self.kxs), dim, dim), dtype=torch.cdouble)
 
         self.evals_gkmg = torch.zeros(
-            (len(self.kys_gkmg), 8), dtype=torch.cdouble)
+            (len(self.kys_gkmg), dim), dtype=torch.cdouble)
         self.evecs_gkmg = torch.zeros(
-            (len(self.kys_gkmg), 8, 8), dtype=torch.cdouble)
+            (len(self.kys_gkmg), dim, dim), dtype=torch.cdouble)
 
-        self.forward()
-        self.forward(True)
+    #     self.forward()
+    #     self.forward(True)
+
+    # def forward(self, gkmg=False):
+    #     if gkmg:
+    #         for i, (ky, kx) in enumerate(zip(self.kys_gkmg, self.kxs_gkmg)):
+    #             k = torch.tensor([[kx], [ky]], dtype=torch.cdouble)
+    #             evals, evecs = torch.linalg.eig(self.h(k))
+    #             idcs = torch.argsort(evals.real)
+    #             evals, evecs = evals[idcs], evecs[idcs]
+    #             self.evals_gkmg[i] = evals
+    #             self.evecs_gkmg[i] = evecs
+    #         if self.perturbation:
+    #             self.evals_gkmg = torch.sqrt(self.evals_gkmg)
+    #         return self.evals_gkmg.real, self.evecs_gkmg
+
+    #     for y, ky in enumerate(self.kys):
+    #         for x, kx in enumerate(self.kxs):
+    #             k = torch.tensor([[kx], [ky]], dtype=torch.cdouble)
+    #             evals, evecs = torch.linalg.eig(self.h(k))
+    #             idcs = torch.argsort(evals.real)
+    #             evals, evecs = evals[idcs], evecs[idcs]
+    #             self.evals[y, x] = evals
+    #             self.evecs[y, x] = evecs
+    #     if self.perturbation:
+    #         self.evals = torch.sqrt(self.evals)
+    #     return self.evals.real, self.evecs
 
     def forward(self, gkmg=False):
         if gkmg:
