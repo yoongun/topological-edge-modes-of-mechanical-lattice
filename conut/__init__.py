@@ -1,3 +1,3 @@
 from .mechanical_graphene import MechanicalGraphene
-from .mechanical_graphene import Mode
-from .plot import Plot
+from .mechanical_graphene import MechanicalGrapheneLattice
+from .mechanical_graphene import HamiltonianType

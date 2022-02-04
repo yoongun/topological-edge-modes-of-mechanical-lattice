@@ -3,33 +3,33 @@ import torch
 
 
 class pauli:
+    def __init__(self, device) -> None:
+        self.device = device
+
     @property
     def i(self):
-        return torch.eyes(2, dtype=torch.cdouble)
+        return torch.eyes(2, dtype=torch.cdouble).to(self.device)
 
     @property
     def x(self):
         return torch.tensor([
             [0., 1.],
             [1., 0.]
-        ], dtype=torch.cdouble)
+        ], dtype=torch.cdouble).to(self.device)
 
     @property
     def y(self):
         return torch.tensor([
             [0., -1.j],
             [1.j, 0.]
-        ], dtype=torch.cdouble)
+        ], dtype=torch.cdouble).to(self.device)
 
     @property
     def z(self):
         return torch.tensor([
             [1., 0.],
             [0., -1.]
-        ], dtype=torch.cdouble)
-
-
-σ = pauli()
+        ], dtype=torch.cdouble).to(self.device)
 
 
 class dirac_impl:
