@@ -1,4 +1,4 @@
-# Topological edge mode of mechanical lattice 🍩=☕
+# Topological edge modes of mechanical lattice 🍩=☕
 
 This repository is the work I've done for my graduation thesis in Hokkaido University from 2021 to 2022.
 
